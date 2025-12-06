@@ -1,6 +1,6 @@
 import { Command } from '../types';
 import { getVoiceConnection, joinVoiceChannel, AudioPlayerStatus } from '@discordjs/voice';
-import { GuildMember, TextChannel } from 'discord.js';
+import { GuildMember, TextChannel, ChannelType } from 'discord.js';
 import { searchYouTube, Song } from '../audio/search';
 import { sessionManager } from '../audio/session_manager';
 
@@ -8,14 +8,20 @@ const command: Command = {
   name: 'play',
   description: 'Plays a song from YouTube.',
   execute: async (message, args) => {
+    message.delete().catch(() => {}); // Delete user's command message
+
     const member = message.member as GuildMember;
     const guildId = message.guildId;
-    const textChannel = message.channel as TextChannel;
+    
+    if (!message.channel || message.channel.type !== ChannelType.GuildText) {
+      return;
+    }
+    const textChannel = message.channel;
 
     if (!member || !guildId) return;
 
     if (!member.voice.channel) {
-      message.reply('You need to be in a voice channel to use this command.');
+      textChannel.send('You need to be in a voice channel to use this command.');
       return;
     }
 
@@ -32,7 +38,7 @@ const command: Command = {
 
     const query = args.join(' ');
     if (!query) {
-      message.reply('Please provide a song name or URL.');
+      textChannel.send('Please provide a song name or URL.');
       return;
     }
 
@@ -47,7 +53,7 @@ const command: Command = {
     }
 
     if (!song) {
-      message.reply('Could not find a song to play.');
+      textChannel.send('Could not find a song to play.');
       return;
     }
     
@@ -57,7 +63,7 @@ const command: Command = {
     if (playerIsIdle) {
       session.playNext();
     } else {
-      const replyMessage = await message.reply(`Added to queue: ${song.title}`);
+      const replyMessage = await textChannel.send(`Added to queue: ${song.title}`);
       setTimeout(() => {
         replyMessage.delete().catch(() => {}); // Ignore errors
       }, 5000);

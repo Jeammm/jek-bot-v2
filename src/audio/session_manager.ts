@@ -77,7 +77,6 @@ export class MusicSession {
         }
       }
       
-      this.textChannel.send('Queue finished.');
       await this.destroy();
     }
   }
