@@ -1,6 +1,6 @@
-import { Collection, Message } from 'discord.js';
-import { Command } from '../types';
-import { logger } from '../core/logger';
+import { Collection, Message } from "discord.js";
+import { Command } from "../types";
+import { logger } from "../core/logger";
 
 const commands = new Collection<string, Command>();
 
@@ -9,7 +9,15 @@ export function registerCommand(command: Command) {
   logger.info(`Registered command: ${command.name}`);
 }
 
-export async function executeCommand(commandName: string, message: Message, args: string[]) {
+export function getCommands(): Collection<string, Command> {
+  return commands;
+}
+
+export async function executeCommand(
+  commandName: string,
+  message: Message,
+  args: string[]
+) {
   const command = commands.get(commandName);
   if (!command) {
     logger.warn(`Command not found: ${commandName}`);
@@ -21,6 +29,6 @@ export async function executeCommand(commandName: string, message: Message, args
     await command.execute(message, args);
   } catch (error) {
     logger.error(`Error executing command ${commandName}:`, error);
-    message.reply('An error occurred while executing this command.');
+    message.reply("An error occurred while executing this command.");
   }
 }

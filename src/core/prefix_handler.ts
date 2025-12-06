@@ -1,11 +1,10 @@
-import { Message } from 'discord.js';
-import { logger } from './logger';
-import client from './discord_client';
-import { executeCommand } from '../handlers/command_handler';
+import { Message } from "discord.js";
+import { logger } from "./logger";
+import client from "./discord_client";
+import { executeCommand } from "../handlers/command_handler";
+import { PREFIX } from "./env";
 
-const PREFIX = 'jek ';
-
-client.on('messageCreate', async (message: Message) => {
+client.on("messageCreate", async (message: Message) => {
   if (message.author.bot || !message.content.startsWith(PREFIX)) {
     return;
   }
@@ -17,8 +16,8 @@ client.on('messageCreate', async (message: Message) => {
     return;
   }
 
-  logger.info(`Command received: ${commandName} with args: ${args.join(', ')}`);
+  logger.info(`Command received: ${commandName} with args: ${args.join(", ")}`);
   await executeCommand(commandName, message, args);
 });
 
-logger.info('Prefix handler loaded.');
+logger.info("Prefix handler loaded.");
