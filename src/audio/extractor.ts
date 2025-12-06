@@ -3,30 +3,18 @@ import { logger } from "../core/logger";
 
 const ytDlp = new YtDlpWrap();
 
-export async function extractAudio(url: string) {
-  logger.info(`Extracting audio from: ${url}`);
-
+export async function getAudioUrl(url: string): Promise<string> {
+  logger.info(`Getting audio URL from: ${url}`);
   try {
-    const stream = ytDlp.execStream([
+    const urlString = await ytDlp.execPromise([
+      url,
       "-f",
       "bestaudio",
-      "--no-playlist",
-      "--no-progress",
-      "--quiet",
-      "--no-warnings",
-      "-o",
-      "-",
-      url,
+      "--get-url",
     ]);
-
-    // stream is already Readable
-    stream.on("error", (err) => {
-      logger.error("yt-dlp stream error:", err);
-    });
-
-    return stream; // <- THIS IS THE AUDIO STREAM
+    return urlString.trim();
   } catch (error) {
-    logger.error("Error extracting audio:", error);
+    logger.error("Error getting audio URL:", error);
     throw error;
   }
 }

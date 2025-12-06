@@ -7,7 +7,7 @@ import {
   VoiceConnection,
 } from "@discordjs/voice";
 import { EventEmitter } from "events";
-import { extractAudio } from "./extractor";
+import { getAudioUrl } from "./extractor";
 import { createPcmStream } from "./ffmpeg";
 import { logger } from "../core/logger";
 import { Song } from "./search";
@@ -46,8 +46,8 @@ export class MusicPlayer extends EventEmitter {
       throw new Error("No voice connection available.");
     }
 
-    const audioStream = await extractAudio(song.url);
-    const pcmStream = createPcmStream(audioStream);
+    const audioUrl = await getAudioUrl(song.url);
+    const pcmStream = createPcmStream(audioUrl);
     const resource = createAudioResource(pcmStream, {
       inputType: StreamType.Raw,
     });

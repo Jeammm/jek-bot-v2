@@ -2,13 +2,19 @@ import { spawn } from "child_process";
 import { Readable } from "stream";
 import { logger } from "../core/logger";
 
-export function createPcmStream(input: Readable): Readable {
-  logger.info("Creating PCM stream with FFmpeg.");
+export function createPcmStream(url: string): Readable {
+  logger.info("Creating PCM stream with FFmpeg from URL.");
   const ffmpegProcess = spawn(
     "ffmpeg",
     [
+      "-reconnect",
+      "1",
+      "-reconnect_streamed",
+      "1",
+      "-reconnect_delay_max",
+      "5",
       "-i",
-      "pipe:0",
+      url,
       "-loglevel",
       "error",
       "-f",
@@ -22,15 +28,12 @@ export function createPcmStream(input: Readable): Readable {
     { stdio: ["pipe", "pipe", "pipe"] }
   );
 
-  input.pipe(ffmpegProcess.stdin);
-
   ffmpegProcess.stderr.on("data", (data) => {
     logger.error(`FFmpeg stderr: ${data}`);
   });
 
   ffmpegProcess.on("error", (error) => {
     logger.error("FFmpeg process error:", error);
-    input.unpipe(ffmpegProcess.stdin);
     ffmpegProcess.kill();
   });
 
