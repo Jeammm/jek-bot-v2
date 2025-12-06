@@ -8,17 +8,16 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install latest yt-dlp binary
-RUN wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/local/bin/yt-dlp \
-    && chmod a+rx /usr/local/bin/yt-dlp
+
 
 WORKDIR /app
 
-# Install pnpm globally
-RUN npm install -g pnpm
+# Enable Corepack (for pnpm)
+RUN corepack enable
 
 # Copy lock files and package manifest
 COPY package.json pnpm-lock.yaml ./
+
 
 # Install dependencies
 RUN pnpm install
