@@ -10,7 +10,7 @@ import { EventEmitter } from "events";
 import { getAudioUrl } from "./extractor";
 import { createPcmStream } from "./ffmpeg";
 import { logger } from "../core/logger";
-import { Song } from "./search";
+import { Song } from "../types";
 import { ChildProcess } from "child_process";
 
 export class MusicPlayer extends EventEmitter {

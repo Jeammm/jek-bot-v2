@@ -1,19 +1,19 @@
-import { Command } from '../types';
-import { sessionManager } from '../audio/session_manager';
+import { Command } from "../types";
+import { sessionManager } from "../audio/session_manager";
 
 const command: Command = {
-  name: 'resume',
-  description: 'Resumes the currently paused song.',
-  execute: (message) => {
+  name: "resume",
+  description: "Resumes the currently paused song.",
+  execute: async (message) => {
     const guildId = message.guildId;
     if (!guildId) return;
 
     const session = sessionManager.get(guildId);
     if (session) {
       session.player.resume();
-      message.reply('Resumed the music.');
+      message.reply("Resumed the music.");
     } else {
-      message.reply('I am not playing anything.');
+      message.reply("I am not playing anything.");
     }
   },
 };

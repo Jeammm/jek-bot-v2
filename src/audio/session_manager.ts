@@ -1,11 +1,11 @@
-import { VoiceConnection } from '@discordjs/voice';
+import { VoiceConnection, AudioPlayerStatus } from '@discordjs/voice';
 import { MusicPlayer } from './player';
 import { Queue } from './queue';
 import { logger } from '../core/logger';
 import { EmbedBuilder, TextChannel, Message } from 'discord.js';
 import { createControlButtons } from '../ui/controls';
-import { Song } from './search';
 import { getRelatedVideos } from './suggest';
+import { Track } from '../types';
 
 export class MusicSession {
   public readonly player: MusicPlayer;
@@ -13,7 +13,7 @@ export class MusicSession {
   public readonly connection: VoiceConnection;
   public nowPlayingMessage: Message | null = null;
   private readonly textChannel: TextChannel;
-  private currentSong: Song | null = null;
+  private currentTrack: Track | null = null;
 
   constructor(connection: VoiceConnection, textChannel: TextChannel) {
     this.connection = connection;
@@ -26,59 +26,79 @@ export class MusicSession {
       this.playNext();
     });
   }
-  
-  public async play(song: Song) {
-    this.currentSong = song;
-    this.player.play(song);
 
-    const embed = new EmbedBuilder()
-      .setColor('#0099ff')
-      .setTitle(song.title)
-      .setURL(song.url)
-      .setAuthor({ name: 'Now Playing' })
-      .setTimestamp();
-    
-    if (song.thumbnail) {
-      embed.setThumbnail(song.thumbnail);
-    }
+  public async play(track: Track) {
+    this.currentTrack = track;
+    this.player.play(track);
 
-    const upcomingSongs = this.queue.getQueue();
-    if (upcomingSongs.length > 0) {
-      const queueString = upcomingSongs
-        .slice(0, 5)
-        .map((s, index) => `${index + 1}. ${s.title}`)
-        .join('\n');
-      embed.addFields({ name: 'Up Next', value: queueString });
-    }
-    
-    if(this.nowPlayingMessage) {
-        await this.nowPlayingMessage.delete().catch(e => logger.error('Error deleting old message', e));
+    const embed = this.createNowPlayingEmbed(track);
+
+    if (this.nowPlayingMessage) {
+      await this.nowPlayingMessage.delete().catch(e => logger.error('Error deleting old message', e));
     }
 
     this.nowPlayingMessage = await this.textChannel.send({
-        embeds: [embed],
-        components: [createControlButtons({ isPaused: false })],
+      embeds: [embed],
+      components: [createControlButtons({ isPaused: false })],
     });
   }
 
   public async playNext() {
-    const nextSong = this.queue.next();
-    if (nextSong) {
-      this.play(nextSong);
+    const nextTrack = this.queue.next();
+    if (nextTrack) {
+      this.play(nextTrack);
     } else {
       // Queue is empty, try to suggest a song
-      if (this.currentSong) {
-        const related = await getRelatedVideos(this.currentSong.url);
+      if (this.currentTrack) {
+        const related = await getRelatedVideos(this.currentTrack.url);
         if (related.length > 0) {
           this.textChannel.send(`Queue is empty. Playing a suggested song...`);
-          this.queue.add(related[0]);
+          const nextTrack: Track = { ...related[0], requestedBy: this.textChannel.client.user! };
+          this.queue.add(nextTrack);
           this.playNext(); // Recurse to play the new song
           return;
         }
       }
-      
+
       await this.destroy();
     }
+  }
+
+  public async updateNowPlayingMessage() {
+    if (!this.nowPlayingMessage || !this.currentTrack) return;
+
+    const embed = this.createNowPlayingEmbed(this.currentTrack);
+
+    await this.nowPlayingMessage.edit({
+      embeds: [embed],
+      components: [createControlButtons({ isPaused: this.player.getStatus() === AudioPlayerStatus.Paused })],
+    });
+  }
+
+  private createNowPlayingEmbed(track: Track): EmbedBuilder {
+    const embed = new EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle(track.title)
+      .setURL(track.url)
+      .setAuthor({ name: 'Now Playing' })
+      .setTimestamp()
+      .setFooter({ text: `Requested by ${track.requestedBy.username}`, iconURL: track.requestedBy.displayAvatarURL() });
+
+    if (track.thumbnail) {
+      embed.setThumbnail(track.thumbnail);
+    }
+
+    embed.addFields({ name: 'Duration', value: track.duration.timestamp, inline: true });
+
+    const upcomingTracks = this.queue.getQueue();
+    if (upcomingTracks.length > 0) {
+      const queueString = upcomingTracks
+        .slice(0, 5)
+        .map((t, index) => `${index + 1}. ${t.title}`)
+        .join('\n');
+      embed.addFields({ name: 'Up Next', value: queueString });
+    }
+    return embed;
   }
 
   public async destroy() {

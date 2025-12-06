@@ -1,18 +1,18 @@
-import { Command } from '../types';
-import { getVoiceConnection, joinVoiceChannel, AudioPlayerStatus } from '@discordjs/voice';
-import { GuildMember, TextChannel, ChannelType } from 'discord.js';
-import { searchYouTube, Song } from '../audio/search';
-import { sessionManager } from '../audio/session_manager';
+import { AudioPlayerStatus, joinVoiceChannel } from "@discordjs/voice";
+import { ChannelType, GuildMember } from "discord.js";
+import { searchYouTube } from "../audio/search";
+import { sessionManager } from "../audio/session_manager";
+import { Command, Song, Track } from "../types";
 
 const command: Command = {
-  name: 'play',
-  description: 'Plays a song from YouTube.',
+  name: "play",
+  description: "Plays a song from YouTube.",
   execute: async (message, args) => {
     message.delete().catch(() => {}); // Delete user's command message
 
     const member = message.member as GuildMember;
     const guildId = message.guildId;
-    
+
     if (!message.channel || message.channel.type !== ChannelType.GuildText) {
       return;
     }
@@ -21,7 +21,9 @@ const command: Command = {
     if (!member || !guildId) return;
 
     if (!member.voice.channel) {
-      const msg = await textChannel.send('You need to be in a voice channel to use this command.');
+      const msg = await textChannel.send(
+        "You need to be in a voice channel to use this command."
+      );
       setTimeout(() => msg.delete().catch(() => {}), 5000);
       return;
     }
@@ -37,39 +39,42 @@ const command: Command = {
       session = sessionManager.create(guildId, connection, textChannel);
     }
 
-    const query = args.join(' ');
+    const query = args.join(" ");
     if (!query) {
-      const msg = await textChannel.send('Please provide a song name or URL.');
+      const msg = await textChannel.send("Please provide a song name or URL.");
       setTimeout(() => msg.delete().catch(() => {}), 5000);
       return;
     }
 
-    const feedbackMessage = await textChannel.send(`🔎 Searching for "${query}"...`);
+    const feedbackMessage = await textChannel.send(
+      `🔎 Searching for "${query}"...`
+    );
 
-    let song: Song | undefined;
-    if (query.startsWith('http')) {
-      song = { title: query, url: query };
-    } else {
-      const results = await searchYouTube(query);
-      if (results.length > 0) {
-        song = results[0];
-      }
-    }
+    const results = await searchYouTube(query);
+    const song: Song | undefined = results.length > 0 ? results[0] : undefined;
 
     if (!song) {
-      await feedbackMessage.edit('❌ Could not find a song to play.');
+      await feedbackMessage.edit("❌ Could not find a song to play.");
       setTimeout(() => feedbackMessage.delete().catch(() => {}), 5000);
       return;
     }
-    
+
+    const track: Track = {
+      ...song,
+      requestedBy: message.author,
+    };
+
     const playerIsIdle = session.player.getStatus() === AudioPlayerStatus.Idle;
-    session.queue.add(song);
+    session.queue.add(track);
 
     if (playerIsIdle) {
       await feedbackMessage.delete().catch(() => {});
       session.playNext();
     } else {
-      await feedbackMessage.edit(`✅ Added to queue: ${song.title}`);
+      await feedbackMessage.edit(`✅ Added to queue: **${track.title}**`);
+      if (session.nowPlayingMessage) {
+        session.updateNowPlayingMessage();
+      }
       setTimeout(() => {
         feedbackMessage.delete().catch(() => {}); // Ignore errors
       }, 5000);
