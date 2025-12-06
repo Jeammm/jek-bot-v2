@@ -21,7 +21,8 @@ const command: Command = {
     if (!member || !guildId) return;
 
     if (!member.voice.channel) {
-      textChannel.send('You need to be in a voice channel to use this command.');
+      const msg = await textChannel.send('You need to be in a voice channel to use this command.');
+      setTimeout(() => msg.delete().catch(() => {}), 5000);
       return;
     }
 
@@ -38,9 +39,12 @@ const command: Command = {
 
     const query = args.join(' ');
     if (!query) {
-      textChannel.send('Please provide a song name or URL.');
+      const msg = await textChannel.send('Please provide a song name or URL.');
+      setTimeout(() => msg.delete().catch(() => {}), 5000);
       return;
     }
+
+    const feedbackMessage = await textChannel.send(`🔎 Searching for "${query}"...`);
 
     let song: Song | undefined;
     if (query.startsWith('http')) {
@@ -53,7 +57,8 @@ const command: Command = {
     }
 
     if (!song) {
-      textChannel.send('Could not find a song to play.');
+      await feedbackMessage.edit('❌ Could not find a song to play.');
+      setTimeout(() => feedbackMessage.delete().catch(() => {}), 5000);
       return;
     }
     
@@ -61,11 +66,12 @@ const command: Command = {
     session.queue.add(song);
 
     if (playerIsIdle) {
+      await feedbackMessage.delete().catch(() => {});
       session.playNext();
     } else {
-      const replyMessage = await textChannel.send(`Added to queue: ${song.title}`);
+      await feedbackMessage.edit(`✅ Added to queue: ${song.title}`);
       setTimeout(() => {
-        replyMessage.delete().catch(() => {}); // Ignore errors
+        feedbackMessage.delete().catch(() => {}); // Ignore errors
       }, 5000);
     }
   },
