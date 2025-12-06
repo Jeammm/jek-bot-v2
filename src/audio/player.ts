@@ -79,6 +79,10 @@ export class MusicPlayer extends EventEmitter {
     this.player.unpause();
   }
 
+  public getStatus() {
+    return this.player.state.status;
+  }
+
   public stop() {
     this.player.stop();
   }

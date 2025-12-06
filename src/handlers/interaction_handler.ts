@@ -2,6 +2,7 @@ import { Interaction } from "discord.js";
 import client from "../core/discord_client";
 import { logger } from "../core/logger";
 import { sessionManager } from "../audio/session_manager";
+import { createControlButtons } from "../ui/controls";
 
 client.on("interactionCreate", async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.guildId) return;
@@ -15,34 +16,29 @@ client.on("interactionCreate", async (interaction: Interaction) => {
     return;
   }
 
+  await interaction.deferUpdate();
+
   const { customId } = interaction;
   logger.info(`Button interaction: ${customId}`);
 
   switch (customId) {
     case "pause":
       session.player.pause();
-      await interaction.reply({ content: "Paused.", flags: "Ephemeral" });
+      await session.nowPlayingMessage?.edit({
+        components: [createControlButtons({ isPaused: true })],
+      });
       break;
     case "resume":
       session.player.resume();
-      await interaction.reply({
-        content: "Resumed.",
-        flags: "Ephemeral",
+      await session.nowPlayingMessage?.edit({
+        components: [createControlButtons({ isPaused: false })],
       });
       break;
     case "skip":
       session.player.stop();
-      await interaction.reply({
-        content: "Skipped.",
-        flags: "Ephemeral",
-      });
       break;
     case "stop":
-      session.destroy();
-      await interaction.reply({
-        content: "Stopped.",
-        flags: "Ephemeral",
-      });
+      await session.destroy();
       break;
   }
 });

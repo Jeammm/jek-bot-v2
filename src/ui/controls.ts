@@ -1,16 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
-export function createControlButtons() {
-  const pause = new ButtonBuilder()
-    .setCustomId('pause')
-    .setLabel('⏸ Pause')
-    .setStyle(ButtonStyle.Secondary);
-
-  const resume = new ButtonBuilder()
-    .setCustomId('resume')
-    .setLabel('▶ Resume')
-    .setStyle(ButtonStyle.Secondary);
-
+export function createControlButtons(options: { isPaused: boolean }) {
   const skip = new ButtonBuilder()
     .setCustomId('skip')
     .setLabel('⏭ Skip')
@@ -21,5 +11,19 @@ export function createControlButtons() {
     .setLabel('⏹ Stop')
     .setStyle(ButtonStyle.Danger);
 
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(pause, resume, skip, stop);
+  const components = [
+    options.isPaused
+      ? new ButtonBuilder()
+          .setCustomId('resume')
+          .setLabel('▶ Resume')
+          .setStyle(ButtonStyle.Success)
+      : new ButtonBuilder()
+          .setCustomId('pause')
+          .setLabel('⏸ Pause')
+          .setStyle(ButtonStyle.Secondary),
+    skip,
+    stop,
+  ];
+
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(components);
 }

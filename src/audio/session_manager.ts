@@ -2,7 +2,7 @@ import { VoiceConnection } from '@discordjs/voice';
 import { MusicPlayer } from './player';
 import { Queue } from './queue';
 import { logger } from '../core/logger';
-import { EmbedBuilder, TextChannel } from 'discord.js';
+import { EmbedBuilder, TextChannel, Message } from 'discord.js';
 import { createControlButtons } from '../ui/controls';
 import { Song } from './search';
 import { getRelatedVideos } from './suggest';
@@ -11,6 +11,7 @@ export class MusicSession {
   public readonly player: MusicPlayer;
   public readonly queue: Queue;
   public readonly connection: VoiceConnection;
+  public nowPlayingMessage: Message | null = null;
   private readonly textChannel: TextChannel;
   private currentSong: Song | null = null;
 
@@ -26,7 +27,7 @@ export class MusicSession {
     });
   }
   
-  public play(song: Song) {
+  public async play(song: Song) {
     this.currentSong = song;
     this.player.play(song);
 
@@ -41,9 +42,22 @@ export class MusicSession {
       embed.setThumbnail(song.thumbnail);
     }
 
-    this.textChannel.send({
+    const upcomingSongs = this.queue.getQueue();
+    if (upcomingSongs.length > 0) {
+      const queueString = upcomingSongs
+        .slice(0, 5)
+        .map((s, index) => `${index + 1}. ${s.title}`)
+        .join('\n');
+      embed.addFields({ name: 'Up Next', value: queueString });
+    }
+    
+    if(this.nowPlayingMessage) {
+        await this.nowPlayingMessage.delete().catch(e => logger.error('Error deleting old message', e));
+    }
+
+    this.nowPlayingMessage = await this.textChannel.send({
         embeds: [embed],
-        components: [createControlButtons()],
+        components: [createControlButtons({ isPaused: false })],
     });
   }
 
@@ -64,11 +78,15 @@ export class MusicSession {
       }
       
       this.textChannel.send('Queue finished.');
-      this.destroy();
+      await this.destroy();
     }
   }
 
-  public destroy() {
+  public async destroy() {
+    if (this.nowPlayingMessage) {
+      await this.nowPlayingMessage.delete().catch(e => logger.error('Error deleting Now Playing message', e));
+      this.nowPlayingMessage = null;
+    }
     this.queue.clear();
     this.player.stop();
     this.connection.destroy();

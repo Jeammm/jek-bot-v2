@@ -1,5 +1,5 @@
 import { Command } from '../types';
-import { getVoiceConnection, joinVoiceChannel } from '@discordjs/voice';
+import { getVoiceConnection, joinVoiceChannel, AudioPlayerStatus } from '@discordjs/voice';
 import { GuildMember, TextChannel } from 'discord.js';
 import { searchYouTube, Song } from '../audio/search';
 import { sessionManager } from '../audio/session_manager';
@@ -51,16 +51,18 @@ const command: Command = {
       return;
     }
     
-    const isQueueEmpty = session.queue.isEmpty();
+    const playerIsIdle = session.player.getStatus() === AudioPlayerStatus.Idle;
     session.queue.add(song);
-    message.reply(`Added to queue: ${song.title}`);
 
-    if (isQueueEmpty) {
+    if (playerIsIdle) {
       session.playNext();
+    } else {
+      const replyMessage = await message.reply(`Added to queue: ${song.title}`);
+      setTimeout(() => {
+        replyMessage.delete().catch(() => {}); // Ignore errors
+      }, 5000);
     }
   },
 };
 
 export default command;
-
-
