@@ -9,10 +9,8 @@ export function createPcmStream(input: Readable): Readable {
     [
       "-i",
       "pipe:0",
-      "-analyzeduration",
-      "0",
       "-loglevel",
-      "0",
+      "error",
       "-f",
       "s16le",
       "-ar",

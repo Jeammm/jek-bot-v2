@@ -24,10 +24,6 @@ export async function extractAudio(url: string) {
       logger.error("yt-dlp stream error:", err);
     });
 
-    stream.on("data", (data) => {
-      logger.error("yt-dlp stderr:", data.toString());
-    });
-
     return stream; // <- THIS IS THE AUDIO STREAM
   } catch (error) {
     logger.error("Error extracting audio:", error);
