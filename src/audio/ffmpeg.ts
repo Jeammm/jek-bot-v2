@@ -1,8 +1,10 @@
-import { spawn } from "child_process";
+import { spawn, ChildProcess } from "child_process";
 import { Readable } from "stream";
 import { logger } from "../core/logger";
 
-export function createPcmStream(url: string): Readable {
+export function createPcmStream(
+  url: string
+): { stream: Readable; process: ChildProcess } {
   logger.info("Creating PCM stream with FFmpeg from URL.");
   const ffmpegProcess = spawn(
     "ffmpeg",
@@ -41,5 +43,5 @@ export function createPcmStream(url: string): Readable {
     throw new Error("FFmpeg stdout is null.");
   }
 
-  return ffmpegProcess.stdout;
+  return { stream: ffmpegProcess.stdout, process: ffmpegProcess };
 }

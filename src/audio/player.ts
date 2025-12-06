@@ -11,10 +11,12 @@ import { getAudioUrl } from "./extractor";
 import { createPcmStream } from "./ffmpeg";
 import { logger } from "../core/logger";
 import { Song } from "./search";
+import { ChildProcess } from "child_process";
 
 export class MusicPlayer extends EventEmitter {
   private player: AudioPlayer;
   private connection: VoiceConnection | null = null;
+  private ffmpegProcess: ChildProcess | null = null;
 
   constructor() {
     super();
@@ -24,6 +26,10 @@ export class MusicPlayer extends EventEmitter {
         newState.status === AudioPlayerStatus.Idle &&
         oldState.status !== AudioPlayerStatus.Idle
       ) {
+        if (this.ffmpegProcess) {
+          this.ffmpegProcess.kill();
+          this.ffmpegProcess = null;
+        }
         this.emit("finish");
       } else if (newState.status === AudioPlayerStatus.Playing) {
         this.emit("start");
@@ -32,6 +38,10 @@ export class MusicPlayer extends EventEmitter {
 
     this.player.on("error", (error) => {
       logger.error("AudioPlayer error:", error);
+      if (this.ffmpegProcess) {
+        this.ffmpegProcess.kill();
+        this.ffmpegProcess = null;
+      }
       this.emit("error", error);
     });
   }
@@ -46,9 +56,15 @@ export class MusicPlayer extends EventEmitter {
       throw new Error("No voice connection available.");
     }
 
+    if (this.ffmpegProcess) {
+      this.ffmpegProcess.kill();
+      this.ffmpegProcess = null;
+    }
+
     const audioUrl = await getAudioUrl(song.url);
-    const pcmStream = createPcmStream(audioUrl);
-    const resource = createAudioResource(pcmStream, {
+    const { stream, process } = createPcmStream(audioUrl);
+    this.ffmpegProcess = process;
+    const resource = createAudioResource(stream, {
       inputType: StreamType.Raw,
     });
 
