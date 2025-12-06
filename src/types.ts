@@ -9,9 +9,9 @@ export interface Command {
 export interface Song {
   title: string;
   url: string;
-  thumbnail: string;
+  thumbnail?: string;
   duration: {
-    seconds: string;
+    seconds: string | number;
     timestamp: string;
   };
 }
