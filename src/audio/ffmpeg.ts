@@ -1,47 +1,30 @@
-import { spawn, ChildProcess } from "child_process";
-import { Readable } from "stream";
+import { spawn } from "child_process";
 import { logger } from "../core/logger";
 
-export function createPcmStream(
-  url: string
-): { stream: Readable; process: ChildProcess } {
-  logger.info("Creating PCM stream with FFmpeg from URL.");
-  const ffmpegProcess = spawn(
-    "ffmpeg",
-    [
-      "-reconnect",
-      "1",
-      "-reconnect_streamed",
-      "1",
-      "-reconnect_delay_max",
-      "5",
-      "-i",
-      url,
-      "-loglevel",
-      "error",
-      "-f",
-      "s16le",
-      "-ar",
-      "48000",
-      "-ac",
-      "2",
-      "pipe:1",
-    ],
-    { stdio: ["pipe", "pipe", "pipe"] }
-  );
+export function createOpusStream(url: string) {
+  const ffmpeg = spawn("ffmpeg", [
+    "-reconnect",
+    "1",
+    "-reconnect_streamed",
+    "1",
+    "-reconnect_delay_max",
+    "5",
+    "-i",
+    url,
+    "-loglevel",
+    "quiet",
+    "-ac",
+    "2",
+    "-f",
+    "opus",
+    "-ar",
+    "48000",
+    "pipe:1",
+  ]);
 
-  ffmpegProcess.stderr.on("data", (data) => {
-    logger.error(`FFmpeg stderr: ${data}`);
+  ffmpeg.stderr?.on("data", (data) => {
+    logger.error("FFmpeg error:", data.toString());
   });
 
-  ffmpegProcess.on("error", (error) => {
-    logger.error("FFmpeg process error:", error);
-    ffmpegProcess.kill();
-  });
-
-  if (!ffmpegProcess.stdout) {
-    throw new Error("FFmpeg stdout is null.");
-  }
-
-  return { stream: ffmpegProcess.stdout, process: ffmpegProcess };
+  return { stream: ffmpeg.stdout, process: ffmpeg };
 }

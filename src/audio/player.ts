@@ -3,12 +3,12 @@ import {
   AudioPlayerStatus,
   createAudioPlayer,
   createAudioResource,
-  StreamType,
+  demuxProbe,
   VoiceConnection,
 } from "@discordjs/voice";
 import { EventEmitter } from "events";
 import { getAudioUrl } from "./extractor";
-import { createPcmStream } from "./ffmpeg";
+import { createOpusStream } from "./ffmpeg";
 import { logger } from "../core/logger";
 import { Song } from "../types";
 import { ChildProcess } from "child_process";
@@ -52,9 +52,7 @@ export class MusicPlayer extends EventEmitter {
   }
 
   public async play(song: Song) {
-    if (!this.connection) {
-      throw new Error("No voice connection available.");
-    }
+    if (!this.connection) throw new Error("No voice connection.");
 
     if (this.ffmpegProcess) {
       this.ffmpegProcess.kill();
@@ -62,10 +60,13 @@ export class MusicPlayer extends EventEmitter {
     }
 
     const audioUrl = await getAudioUrl(song.url);
-    const { stream, process } = createPcmStream(audioUrl);
+    const { stream, process } = createOpusStream(audioUrl);
     this.ffmpegProcess = process;
-    const resource = createAudioResource(stream, {
-      inputType: StreamType.Raw,
+
+    const { stream: probed, type } = await demuxProbe(stream);
+
+    const resource = createAudioResource(probed, {
+      inputType: type,
     });
 
     this.player.play(resource);
