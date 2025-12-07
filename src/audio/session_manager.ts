@@ -40,8 +40,10 @@ export class MusicSession {
 
     this.nowPlayingMessage = await this.textChannel.send({
       embeds: [embed],
-      components: [createControlButtons({ isPaused: false })],
+      components: createControlButtons({ isPaused: false }),
     });
+
+    this.player.nowPlaying = track;
   }
 
   public async playNext() {
@@ -60,11 +62,9 @@ export class MusicSession {
 
     await this.nowPlayingMessage.edit({
       embeds: [embed],
-      components: [
-        createControlButtons({
-          isPaused: this.player.getStatus() === AudioPlayerStatus.Paused,
-        }),
-      ],
+      components: createControlButtons({
+        isPaused: this.player.getStatus() === AudioPlayerStatus.Paused,
+      }),
     });
   }
 

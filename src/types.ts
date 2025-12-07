@@ -19,3 +19,24 @@ export interface Song {
 export interface Track extends Song {
   requestedBy: User;
 }
+
+export interface UserPlaylist {
+  userId: string;
+  createdAt: number;
+}
+
+export interface GuildAnthem {
+  guildId: string;
+  createdAt: number;
+}
+
+export interface PlaylistSong {
+  id: string; // UUID
+  userId?: string;
+  guildId?: string;
+  title: string;
+  url: string;
+  addedBy: string; // User ID of who added it
+  orderIndex: number;
+  addedAt: number;
+}

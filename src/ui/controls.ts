@@ -11,19 +11,36 @@ export function createControlButtons(options: { isPaused: boolean }) {
     .setLabel('⏹ Stop')
     .setStyle(ButtonStyle.Danger);
 
-  const components = [
-    options.isPaused
-      ? new ButtonBuilder()
-          .setCustomId('resume')
-          .setLabel('▶ Resume')
-          .setStyle(ButtonStyle.Success)
-      : new ButtonBuilder()
-          .setCustomId('pause')
-          .setLabel('⏸ Pause')
-          .setStyle(ButtonStyle.Secondary),
+  const pauseResumeButton = options.isPaused
+    ? new ButtonBuilder()
+        .setCustomId('resume')
+        .setLabel('▶ Resume')
+        .setStyle(ButtonStyle.Success)
+    : new ButtonBuilder()
+        .setCustomId('pause')
+        .setLabel('⏸ Pause')
+        .setStyle(ButtonStyle.Secondary);
+
+  const addToMyPlaylist = new ButtonBuilder()
+    .setCustomId('playlist_add_current')
+    .setLabel('⭐ Add to My Playlist')
+    .setStyle(ButtonStyle.Primary);
+
+  const addToGuildAnthem = new ButtonBuilder()
+    .setCustomId('anthem_add_current')
+    .setLabel('🔥 Add to Guild Anthem')
+    .setStyle(ButtonStyle.Primary);
+
+  const controlRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    pauseResumeButton,
     skip,
     stop,
-  ];
+  );
 
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(components);
+  const playlistRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    addToMyPlaylist,
+    addToGuildAnthem,
+  );
+
+  return [controlRow, playlistRow];
 }

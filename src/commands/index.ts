@@ -10,6 +10,8 @@ import resume from "./resume";
 import skip from "./skip";
 import stop from "./stop";
 import help from "./help";
+import playlist from "./playlist";
+import anthem from "./anthem";
 
 const commands: Command[] = [
   join,
@@ -20,6 +22,8 @@ const commands: Command[] = [
   skip,
   stop,
   help,
+  playlist,
+  anthem,
 ];
 
 export function loadCommands() {

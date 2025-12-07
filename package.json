@@ -7,6 +7,7 @@
     "dev": "NODE_ENV=dev ts-node-dev --respawn --transpile-only src/app.ts",
     "start": "NODE_ENV=dev node dist/app.js",
     "start:prod": "NODE_ENV=prod node dist/app.js",
+    "db:migrate": "supabase db push",
     "build": "tsc"
   },
   "keywords": [],
@@ -21,12 +22,16 @@
     "dotenv": "^17.2.3",
     "ffmpeg-static": "^5.3.0",
     "opusscript": "^0.1.1",
+    "pg": "^8.16.3",
+    "uuid": "^13.0.0",
     "yt-dlp-wrap": "^2.3.12",
     "yt-search": "^2.13.1",
     "ytdl-core": "^4.11.5"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
+    "@types/pg": "^8.15.6",
+    "@types/uuid": "^11.0.0",
     "@types/yt-search": "^2.10.3",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"

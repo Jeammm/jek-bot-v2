@@ -17,6 +17,7 @@ export class MusicPlayer extends EventEmitter {
   private player: AudioPlayer;
   private connection: VoiceConnection | null = null;
   private ffmpegProcess: ChildProcess | null = null;
+  public nowPlaying: Song | null = null;
 
   constructor() {
     super();
