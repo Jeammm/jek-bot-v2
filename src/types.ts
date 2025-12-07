@@ -21,24 +21,24 @@ export interface Track extends Song {
 }
 
 export interface UserPlaylist {
-  userId: string;
-  createdAt: number;
+  user_id: string;
+  created_at: number;
 }
 
 export interface GuildAnthem {
-  guildId: string;
-  createdAt: number;
+  guild_id: string;
+  created_at: number;
 }
 
 export interface PlaylistSong {
   id: string;
-  userId?: string;
-  guildId?: string;
+  user_id?: string;
+  guild_id?: string;
   title: string;
   url: string;
-  addedBy: string;
-  orderIndex: number;
+  added_by: string;
+  order_index: number;
   seconds: number;
   ts: string;
-  addedAt: number;
+  added_at: number;
 }

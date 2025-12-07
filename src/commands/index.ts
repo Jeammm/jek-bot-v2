@@ -1,6 +1,5 @@
 import { registerCommand } from "../handlers/command_handler";
 import { Command } from "../types";
-import { logger } from "../core/logger";
 
 import join from "./join";
 import leave from "./leave";
@@ -28,12 +27,6 @@ const commands: Command[] = [
 
 export function loadCommands() {
   for (const command of commands) {
-    if (command && typeof command === "object" && "name" in command) {
-      registerCommand(command as Command);
-    } else {
-      logger.error(
-        `Error loading a command: it is not a valid command object.`
-      );
-    }
+    registerCommand(command);
   }
 }

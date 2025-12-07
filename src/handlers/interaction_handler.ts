@@ -1,4 +1,4 @@
-import { Interaction } from "discord.js";
+import { GuildMember, Interaction, TextChannel } from "discord.js";
 import client from "../core/discord_client";
 import { logger } from "../core/logger";
 import { sessionManager } from "../audio/session_manager";
@@ -8,13 +8,88 @@ import {
   saveSongToUserPlaylist,
   ensureGuildAnthem,
   saveSongToGuildAnthem,
+  getUserPlaylistSongs,
+  getGuildAnthemSongs,
 } from "../core/db/db";
+import { AudioPlayerStatus, joinVoiceChannel } from "@discordjs/voice";
 
 client.on("interactionCreate", async (interaction: Interaction) => {
   if (!interaction.isButton() || !interaction.guildId) return;
 
-  const session = sessionManager.get(interaction.guildId);
+  const { customId } = interaction;
+  logger.info(`Button interaction: ${customId}`);
+
+  let session = sessionManager.get(interaction.guildId);
   const currentSong = session?.player.nowPlaying;
+
+  if (customId.startsWith("run_playlist")) {
+    if (!interaction.guild) {
+      await interaction.reply("This command can only be used in a server.");
+      return;
+    }
+
+    const member = interaction.member as GuildMember;
+    const voice = member.voice.channel;
+
+    if (!voice) {
+      await interaction.reply({
+        content: "You need to be in a voice channel to use this button.",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (!session) {
+      const connection = joinVoiceChannel({
+        channelId: voice.id,
+        guildId: interaction.guild!.id,
+        adapterCreator: interaction.guild!.voiceAdapterCreator,
+      });
+
+      session = sessionManager.create(
+        interaction.guildId,
+        connection,
+        interaction.channel! as TextChannel
+      );
+    }
+
+    const [, , type, , , ownerId] = customId.split("_");
+
+    let songs = [];
+
+    if (type === "user") {
+      songs = await getUserPlaylistSongs(ownerId);
+    } else {
+      songs = await getGuildAnthemSongs(ownerId);
+    }
+
+    for (const song of songs) {
+      const track = {
+        title: song.title,
+        url: song.url,
+        duration: { seconds: song.seconds, timestamp: song.ts },
+        requestedBy: interaction.user,
+      };
+      session.queue.add(track);
+    }
+
+    const playerIsIdle = session.player.getStatus() === AudioPlayerStatus.Idle;
+
+    if (playerIsIdle) {
+      session.playNext();
+    }
+
+    if (session.nowPlayingMessage) {
+      session.updateNowPlayingMessage();
+    }
+
+    await interaction.reply({
+      content: `▶ Added ${songs.length} songs to the queue!`,
+      ephemeral: true,
+    });
+
+    return;
+  }
 
   if (!session || !currentSong) {
     await interaction.reply({
@@ -25,9 +100,6 @@ client.on("interactionCreate", async (interaction: Interaction) => {
   }
 
   await interaction.deferReply({ ephemeral: true });
-
-  const { customId } = interaction;
-  logger.info(`Button interaction: ${customId}`);
 
   switch (customId) {
     case "pause":
