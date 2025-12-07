@@ -4,10 +4,10 @@
   "description": "",
   "main": "dist/app.js",
   "scripts": {
-    "start": "pnpm build && node dist/app.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
-    "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "NODE_ENV=dev ts-node-dev --respawn --transpile-only src/app.ts",
+    "start": "NODE_ENV=dev node dist/app.js",
+    "start:prod": "NODE_ENV=prod node dist/app.js",
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
