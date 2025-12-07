@@ -11,7 +11,7 @@ const command: Command = {
     message.delete().catch(() => {}); // Delete user's command message
 
     const member = message.member as GuildMember;
-    const guildId = message.guildId;
+    const { guildId } = message;
 
     if (!message.channel || message.channel.type !== ChannelType.GuildText) {
       return;
@@ -76,7 +76,7 @@ const command: Command = {
         session.updateNowPlayingMessage();
       }
       setTimeout(() => {
-        feedbackMessage.delete().catch(() => {}); // Ignore errors
+        feedbackMessage.delete().catch(() => {});
       }, 5000);
     }
   },

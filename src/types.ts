@@ -31,12 +31,14 @@ export interface GuildAnthem {
 }
 
 export interface PlaylistSong {
-  id: string; // UUID
+  id: string;
   userId?: string;
   guildId?: string;
   title: string;
   url: string;
-  addedBy: string; // User ID of who added it
+  addedBy: string;
   orderIndex: number;
+  seconds: number;
+  ts: string;
   addedAt: number;
 }

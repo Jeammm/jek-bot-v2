@@ -1,5 +1,5 @@
 import { Command } from "../types";
-import { Message, EmbedBuilder } from "discord.js";
+import { Message, EmbedBuilder, ChannelType } from "discord.js";
 import {
   getGuildAnthemSongs,
   removeSongFromGuildAnthem,
@@ -10,26 +10,21 @@ import { logger } from "../core/logger";
 import { sessionManager } from "../audio/session_manager";
 import { searchYouTube } from "../audio/search";
 import { Track } from "../types";
+import { joinVoiceChannel } from "@discordjs/voice";
 
 const anthemCommand: Command = {
   name: "anthem",
   description: "Manage the guild's anthem.",
   async execute(message: Message, args: string[]) {
     const subCommand = args[0];
-    const { guildId } = message;
+    const { guildId, channel, member } = message;
 
-    if (!guildId) {
-      await message.reply("This command can only be used in a server.");
+    if (!channel || channel.type !== ChannelType.GuildText) {
       return;
     }
 
-    const session = sessionManager.get(guildId);
-    if (
-      !session &&
-      (subCommand === "play" || subCommand === "add" || subCommand === "remove")
-    ) {
-      // Similar to playlist command, refine this condition if needed.
-      await message.reply("The bot is not currently in a voice channel.");
+    if (!guildId) {
+      await message.reply("This command can only be used in a server.");
       return;
     }
 
@@ -42,7 +37,7 @@ const anthemCommand: Command = {
         }
 
         const embed = new EmbedBuilder()
-          .setColor("#FFD700") // Gold color for anthem
+          .setColor("#FFD700")
           .setTitle(`${message.guild?.name}'s Anthem`)
           .setDescription(
             songs
@@ -62,17 +57,30 @@ const anthemCommand: Command = {
           return;
         }
 
-        if (!session) {
-          await message.reply("The bot is not currently in a voice channel.");
+        let session = sessionManager.get(guildId);
+
+        if (!member?.voice.channel) {
+          const msg = await channel.send(
+            "You need to be in a voice channel to use this command."
+          );
+          setTimeout(() => msg.delete().catch(() => {}), 5000);
           return;
+        }
+
+        if (!session) {
+          const connection = joinVoiceChannel({
+            channelId: member.voice.channel.id,
+            guildId: guildId,
+            adapterCreator: member.guild.voiceAdapterCreator,
+          });
+          session = sessionManager.create(guildId, connection, channel);
         }
 
         for (const song of anthemSongs) {
           const track: Track = {
             title: song.title,
             url: song.url,
-            // Assuming default values or fetching these later if needed
-            duration: { seconds: 0, timestamp: "0:00" },
+            duration: { seconds: song.seconds, timestamp: song.ts },
             requestedBy: message.author,
           };
           session.queue.add(track);
@@ -97,7 +105,7 @@ const anthemCommand: Command = {
           const removed = await removeSongFromGuildAnthem(
             guildId,
             indexToRemove - 1
-          ); // Adjust for 0-based index
+          );
           if (removed) {
             await message.reply(
               `Removed **${removed.title}** from the guild anthem.`
@@ -120,7 +128,10 @@ const anthemCommand: Command = {
 
         await ensureGuildAnthem(guildId);
 
-        // Search for the song
+        const searchingMessage = await channel.send(
+          `🔎 Searching for "${query}"...`
+        );
+
         const result = await searchYouTube(query);
 
         if (!result) {
@@ -128,11 +139,11 @@ const anthemCommand: Command = {
           return;
         }
 
-        // Add the song to the guild's anthem
         await saveSongToGuildAnthem(guildId, result[0], message.author.id);
-        await message.reply(
+        await searchingMessage.edit(
           `Added **${result[0].title}** to the guild anthem.`
         );
+
         break;
 
       default:

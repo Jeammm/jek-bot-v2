@@ -1,5 +1,5 @@
 import { Command } from "../types";
-import { Message, EmbedBuilder } from "discord.js";
+import { Message, EmbedBuilder, ChannelType, GuildMember } from "discord.js";
 import {
   getUserPlaylistSongs,
   removeSongFromUserPlaylist,
@@ -10,6 +10,7 @@ import { logger } from "../core/logger";
 import { sessionManager } from "../audio/session_manager";
 import { searchYouTube } from "../audio/search";
 import { Track } from "../types";
+import { AudioPlayerStatus, joinVoiceChannel } from "@discordjs/voice";
 
 const playlistCommand: Command = {
   name: "playlist",
@@ -17,23 +18,14 @@ const playlistCommand: Command = {
   async execute(message: Message, args: string[]) {
     const subCommand = args[0];
     const userId = message.author.id;
-    const { guildId } = message;
+    const { guildId, channel, member } = message;
 
-    if (!guildId) {
-      await message.reply("This command can only be used in a server.");
+    if (!channel || channel.type !== ChannelType.GuildText) {
       return;
     }
 
-    const session = sessionManager.get(guildId);
-    if (
-      !session &&
-      (subCommand === "play" || subCommand === "add" || subCommand === "remove")
-    ) {
-      // For "play" and "add" commands, the bot needs to be in a voice channel.
-      // For "remove" it doesn't necessarily need to be.
-      // Re-evaluate this condition to be more precise for each subcommand.
-      // For now, let's keep it as is, assuming the user expects the bot to be active.
-      await message.reply("The bot is not currently in a voice channel.");
+    if (!guildId) {
+      await message.reply("This command can only be used in a server.");
       return;
     }
 
@@ -66,26 +58,53 @@ const playlistCommand: Command = {
           return;
         }
 
-        if (!session) {
-          await message.reply("The bot is not currently in a voice channel.");
+        let session = sessionManager.get(guildId);
+
+        if (!member?.voice.channel) {
+          const msg = await channel.send(
+            "You need to be in a voice channel to use this command."
+          );
+          setTimeout(() => msg.delete().catch(() => {}), 5000);
           return;
+        }
+
+        if (!session) {
+          const connection = joinVoiceChannel({
+            channelId: member.voice.channel.id,
+            guildId: guildId,
+            adapterCreator: member.guild.voiceAdapterCreator,
+          });
+          session = sessionManager.create(guildId, connection, channel);
         }
 
         for (const song of playlistSongs) {
           const track: Track = {
             title: song.title,
             url: song.url,
-            // Assuming default values or fetching these later if needed
-            duration: { seconds: 0, timestamp: "0:00" },
+            duration: { seconds: song.seconds, timestamp: song.ts },
             requestedBy: message.author,
           };
           session.queue.add(track);
         }
 
-        if (!session.player.getStatus()) {
+        const playerIsIdle =
+          session.player.getStatus() === AudioPlayerStatus.Idle;
+
+        if (playerIsIdle) {
           session.playNext();
         }
-        await message.reply("Playing your playlist now!");
+
+        if (session.nowPlayingMessage) {
+          session.updateNowPlayingMessage();
+        }
+
+        const feedbackMessage = await message.reply(
+          "Playing your playlist now!"
+        );
+
+        setTimeout(() => {
+          feedbackMessage.delete();
+        }, 5000);
         break;
 
       case "remove":
@@ -101,16 +120,23 @@ const playlistCommand: Command = {
           const removed = await removeSongFromUserPlaylist(
             userId,
             indexToRemove - 1
-          ); // Adjust for 0-based index
+          );
+
+          let feedbackMessage;
+
           if (removed) {
-            await message.reply(
+            feedbackMessage = await message.reply(
               `Removed **${removed.title}** from your playlist.`
             );
           } else {
-            await message.reply(
+            feedbackMessage = await message.reply(
               "Song not found at that index in your playlist."
             );
           }
+
+          setTimeout(() => {
+            feedbackMessage.delete().catch(() => {});
+          }, 5000);
         } catch (error) {
           logger.error("Error removing song from user playlist:", error);
           await message.reply("Failed to remove song from your playlist.");
@@ -126,17 +152,37 @@ const playlistCommand: Command = {
 
         await ensureUserPlaylist(userId);
 
-        // Search for the song
-        const result = await searchYouTube(query);
-
-        if (!result) {
-          await message.reply("Could not find a song with that query.");
+        if (!channel || channel.type !== 0) {
+          await message.reply(
+            "This command can only be used in text channels."
+          );
           return;
         }
 
-        // Add the song to the user's playlist
+        message.delete().catch(() => {});
+
+        const searchingMessage = await channel.send(
+          `🔎 Searching for "${query}"...`
+        );
+
+        const result = await searchYouTube(query);
+
+        if (!result) {
+          await channel.send("Could not find a song with that query.");
+          return;
+        }
+
+        searchingMessage.delete().catch(() => {});
+
         await saveSongToUserPlaylist(userId, result[0], userId);
-        await message.reply(`Added **${result[0].title}** to your playlist.`);
+        const addedMessage = await channel.send(
+          `Added **${result[0].title}** to your playlist.`
+        );
+
+        setTimeout(() => {
+          addedMessage.delete().catch(() => {});
+        }, 5000);
+
         break;
 
       default:

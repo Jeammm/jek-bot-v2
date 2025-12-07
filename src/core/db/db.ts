@@ -89,10 +89,19 @@ export const saveSongToUserPlaylist = async (
   const id = uuidv4();
   await query(
     `
-    INSERT INTO playlist_songs (id, user_id, title, url, added_by, order_index, added_at)
-    VALUES ($1, $2, $3, $4, $5, (SELECT COALESCE(MAX(order_index), -1) + 1 FROM playlist_songs WHERE user_id = $2), $6);
+    INSERT INTO playlist_songs (id, user_id, title, url, added_by, order_index, added_at, seconds, ts)
+    VALUES ($1, $2, $3, $4, $5, (SELECT COALESCE(MAX(order_index), -1) + 1 FROM playlist_songs WHERE user_id = $2), $6, $7, $8);
   `,
-    [id, userId, song.title, song.url, addedBy, now]
+    [
+      id,
+      userId,
+      song.title,
+      song.url,
+      addedBy,
+      now,
+      song.duration.seconds,
+      song.duration.timestamp,
+    ]
   );
 };
 
@@ -105,10 +114,19 @@ export const saveSongToGuildAnthem = async (
   const id = uuidv4();
   await query(
     `
-    INSERT INTO playlist_songs (id, guild_id, title, url, added_by, order_index, added_at)
-    VALUES ($1, $2, $3, $4, $5, (SELECT COALESCE(MAX(order_index), -1) + 1 FROM playlist_songs WHERE guild_id = $2), $6);
+    INSERT INTO playlist_songs (id, guild_id, title, url, added_by, order_index, added_at, seconds, ts)
+    VALUES ($1, $2, $3, $4, $5, (SELECT COALESCE(MAX(order_index), -1) + 1 FROM playlist_songs WHERE guild_id = $2), $6, $7, $8);
   `,
-    [id, guildId, song.title, song.url, addedBy, now]
+    [
+      id,
+      guildId,
+      song.title,
+      song.url,
+      addedBy,
+      now,
+      song.duration.seconds,
+      song.duration.timestamp,
+    ]
   );
 };
 
@@ -117,7 +135,7 @@ export const getUserPlaylistSongs = async (
 ): Promise<PlaylistSong[]> => {
   const res = await query<PlaylistSong>(
     `
-    SELECT id, user_id, guild_id, title, url, added_by, order_index, added_at
+    SELECT id, user_id, guild_id, title, url, added_by, order_index, added_at, seconds, ts
     FROM playlist_songs
     WHERE user_id = $1
     ORDER BY order_index ASC;
@@ -134,7 +152,7 @@ export const removeSongFromUserPlaylist = async (
   // Get the song to be removed
   const songToRemoveRes = await query<PlaylistSong>(
     `
-    SELECT id, user_id, guild_id, title, url, added_by, order_index, added_at
+    SELECT id, user_id, guild_id, title, url, added_by, order_index, added_at, seconds, ts
     FROM playlist_songs
     WHERE user_id = $1 AND order_index = $2;
   `,
@@ -174,7 +192,7 @@ export const getGuildAnthemSongs = async (
 ): Promise<PlaylistSong[]> => {
   const res = await query<PlaylistSong>(
     `
-    SELECT id, user_id, guild_id, title, url, added_by, order_index, added_at
+    SELECT id, user_id, guild_id, title, url, added_by, order_index, added_at, seconds, ts
     FROM playlist_songs
     WHERE guild_id = $1
     ORDER BY order_index ASC;
@@ -191,7 +209,7 @@ export const removeSongFromGuildAnthem = async (
   // Get the song to be removed
   const songToRemoveRes = await query<PlaylistSong>(
     `
-    SELECT id, user_id, guild_id, title, url, added_by, order_index, added_at
+    SELECT id, user_id, guild_id, title, url, added_by, order_index, added_at, seconds, ts
     FROM playlist_songs
     WHERE guild_id = $1 AND order_index = $2;
   `,

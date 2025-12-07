@@ -1,0 +1,2 @@
+ALTER TABLE playlist_songs
+  ALTER COLUMN ts TYPE TEXT;
