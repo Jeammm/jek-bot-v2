@@ -1,5 +1,10 @@
-import { Command, PlaylistSong, Song, Track } from "../types";
-import { Message, EmbedBuilder, ChannelType } from "discord.js";
+import { SlashCommand, PlaylistSong, Song, Track } from "../types";
+import {
+  EmbedBuilder,
+  SlashCommandBuilder,
+  TextChannel,
+  ChatInputCommandInteraction,
+} from "discord.js";
 import { searchYouTube } from "../audio/search";
 import { sessionManager } from "../audio/session_manager";
 import { AudioPlayerStatus, joinVoiceChannel } from "@discordjs/voice";
@@ -15,24 +20,56 @@ interface PlaylistCoreOptions {
   removeSong: (id: string, order: number) => Promise<PlaylistSong | null>;
 }
 
-export function createPlaylistLikeCommand(opts: PlaylistCoreOptions): Command {
-  const prefix = opts.name; // playlist or anthem
+export function createPlaylistLikeCommand(
+  opts: PlaylistCoreOptions
+): SlashCommand {
+  const data = new SlashCommandBuilder()
+    .setName(opts.name)
+    .setDescription(`Manage your ${opts.name}`)
+    .addSubcommand((subcommand) =>
+      subcommand.setName("show").setDescription(`Show your ${opts.name}`)
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("add")
+        .setDescription(`Add a song to your ${opts.name}`)
+        .addStringOption((option) =>
+          option
+            .setName("query")
+            .setDescription("The song to add")
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("remove")
+        .setDescription(`Remove a song from your ${opts.name}`)
+        .addIntegerOption((option) =>
+          option
+            .setName("number")
+            .setDescription("The number of the song to remove")
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand.setName("play").setDescription(`Play your ${opts.name}`)
+    );
 
   return {
-    name: opts.name,
-    description: `Manage your ${prefix}`,
-
-    async execute(message: Message, args: string[]) {
-      const { channel } = message;
-      if (channel.type !== ChannelType.GuildText) {
-        await message.reply("This command can only be used inside a server.");
+    data,
+    async execute(interaction: ChatInputCommandInteraction) {
+      const { channel } = interaction;
+      if (!(channel instanceof TextChannel)) {
+        await interaction.reply(
+          "This command can only be used inside a server."
+        );
         return;
       }
 
       const ownerId =
-        opts.type === "guild" ? message.guild!.id : message.author.id;
+        opts.type === "guild" ? interaction.guild!.id : interaction.user.id;
 
-      const sub = args[0];
+      const sub = interaction.options.getSubcommand();
 
       await opts.ensure(ownerId);
 
@@ -41,7 +78,7 @@ export function createPlaylistLikeCommand(opts: PlaylistCoreOptions): Command {
           const songs = await opts.getSongs(ownerId);
 
           if (!songs.length) {
-            await message.reply(`Your ${prefix} is empty.`);
+            await interaction.reply(`${opts.name} is empty.`);
             return;
           }
 
@@ -51,7 +88,7 @@ export function createPlaylistLikeCommand(opts: PlaylistCoreOptions): Command {
           const users = new Map();
           for (const id of userIds) {
             try {
-              const user = await message.client.users.fetch(id);
+              const user = await interaction.client.users.fetch(id);
               users.set(id, user.username);
             } catch {
               users.set(id, "Unknown User");
@@ -59,7 +96,7 @@ export function createPlaylistLikeCommand(opts: PlaylistCoreOptions): Command {
           }
 
           const embed = new EmbedBuilder()
-            .setTitle(`${prefix.toUpperCase()}`)
+            .setTitle(opts.name.toUpperCase())
             .setDescription(
               songs
                 .map(
@@ -71,7 +108,7 @@ export function createPlaylistLikeCommand(opts: PlaylistCoreOptions): Command {
                 .join("\n")
             );
 
-          await message.reply({
+          await interaction.reply({
             embeds: [embed],
             components: createPlaylistButtons(ownerId, opts.type),
           });
@@ -79,13 +116,9 @@ export function createPlaylistLikeCommand(opts: PlaylistCoreOptions): Command {
           break;
 
         case "add":
-          const query = args.slice(1).join(" ");
-          if (!query) {
-            await message.reply(`Usage: ${prefix} add <song name>`);
-            return;
-          }
+          const query = interaction.options.getString("query", true);
 
-          const searching = await message.reply(
+          const searching = await interaction.reply(
             `🔎 Searching for **${query}**...`
           );
           const track = await searchYouTube(query);
@@ -95,45 +128,47 @@ export function createPlaylistLikeCommand(opts: PlaylistCoreOptions): Command {
             return;
           }
 
-          await opts.saveSong(ownerId, track[0], message.author.id);
+          await opts.saveSong(ownerId, track[0], interaction.user.id);
 
-          await searching.edit(`✔ Added **${track[0].title}** to ${prefix}!`);
+          await searching.edit(
+            `✔ Added **${track[0].title}** to ${opts.name}!`
+          );
           break;
 
         case "remove":
-          const index = Number(args[1]) - 1;
-          if (isNaN(index)) {
-            await message.reply(`Usage: ${prefix} remove <number>`);
-            return;
-          }
+          const index = interaction.options.getInteger("number", true) - 1;
           const removed = await opts.removeSong(ownerId, index);
 
           if (!removed) {
-            await message.reply("❌ Could not find that song.");
+            await interaction.reply("❌ Could not find that song.");
             return;
           }
 
-          await message.reply(`🗑 Removed **${removed.title}**`);
+          await interaction.reply(`🗑 Removed **${removed.title}**`);
           break;
 
         case "play":
-          const voice = message.member?.voice.channel;
+          const member = interaction.member;
+          if (!member || !("voice" in member)) {
+            return;
+          }
+          const voice = member.voice.channel;
           if (!voice) {
-            await message.reply("You must join a voice channel.");
+            await interaction.reply("You must join a voice channel.");
             return;
           }
 
-          let session = sessionManager.get(message.guild!.id);
+          let session = sessionManager.get(interaction.guild!.id);
 
           if (!session) {
             const connection = joinVoiceChannel({
               channelId: voice.id,
-              guildId: message.guild!.id,
-              adapterCreator: message.guild!.voiceAdapterCreator,
+              guildId: interaction.guild!.id,
+              adapterCreator: interaction.guild!.voiceAdapterCreator,
             });
 
             session = sessionManager.create(
-              message.guild!.id,
+              interaction.guild!.id,
               connection,
               channel
             );
@@ -141,7 +176,7 @@ export function createPlaylistLikeCommand(opts: PlaylistCoreOptions): Command {
 
           const list = await opts.getSongs(ownerId);
           if (!list.length) {
-            await message.reply("Playlist is empty.");
+            await interaction.reply("Playlist is empty.");
             return;
           }
 
@@ -149,8 +184,11 @@ export function createPlaylistLikeCommand(opts: PlaylistCoreOptions): Command {
             const track: Track = {
               title: song.title,
               url: song.url,
-              duration: { seconds: song.seconds, timestamp: song.ts },
-              requestedBy: message.author,
+              duration: {
+                seconds: song.seconds,
+                timestamp: song.ts,
+              },
+              requestedBy: interaction.user,
             };
             session.queue.add(track);
           }
@@ -169,7 +207,9 @@ export function createPlaylistLikeCommand(opts: PlaylistCoreOptions): Command {
           break;
 
         default:
-          await message.reply(`Unknown command. Try: show, add, remove, play`);
+          await interaction.reply(
+            `Unknown command. Try: show, add, remove, play`
+          );
       }
     },
   };

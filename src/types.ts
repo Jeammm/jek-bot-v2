@@ -1,10 +1,27 @@
-import { Message, User } from "discord.js";
+import {
+  ChatInputCommandInteraction,
+  Message,
+  SlashCommandBuilder,
+  SlashCommandOptionsOnlyBuilder,
+  SlashCommandSubcommandsOnlyBuilder,
+  User,
+} from "discord.js";
 
-export interface Command {
+export interface PrefixCommand {
   name: string;
   description: string;
   execute: (message: Message, args: string[]) => void | Promise<void>;
 }
+
+export interface SlashCommand {
+  data:
+    | SlashCommandBuilder
+    | SlashCommandSubcommandsOnlyBuilder
+    | SlashCommandOptionsOnlyBuilder;
+  execute: (interaction: ChatInputCommandInteraction) => void | Promise<void>;
+}
+
+export type Command = PrefixCommand | SlashCommand;
 
 export interface Song {
   title: string;

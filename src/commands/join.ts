@@ -1,21 +1,25 @@
-import { Command } from "../types";
+import { SlashCommand } from "../types";
 import { joinVoiceChannel } from "@discordjs/voice";
 import { GuildMember } from "discord.js";
+import { SlashCommandBuilder } from "@discordjs/builders";
 
-const command: Command = {
-  name: "join",
-  description: "Joins the voice channel of the user.",
-  execute: async (message) => {
-    const member = message.member as GuildMember;
+const command: SlashCommand = {
+  data: new SlashCommandBuilder()
+    .setName("join")
+    .setDescription("Joins the voice channel of the user."),
+  execute: async (interaction) => {
+    const member = interaction.member as GuildMember;
     if (member && member.voice.channel) {
       joinVoiceChannel({
         channelId: member.voice.channel.id,
         guildId: member.guild.id,
         adapterCreator: member.guild.voiceAdapterCreator,
       });
-      message.reply(`Joined ${member.voice.channel.name}!`);
+      await interaction.reply(`Joined ${member.voice.channel.name}!`);
     } else {
-      message.reply("You need to be in a voice channel to use this command.");
+      await interaction.reply(
+        "You need to be in a voice channel to use this command."
+      );
     }
   },
 };

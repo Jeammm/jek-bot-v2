@@ -1,19 +1,21 @@
-import { Command } from "../types";
+import { SlashCommand } from "../types";
 import { sessionManager } from "../audio/session_manager";
+import { SlashCommandBuilder } from "@discordjs/builders";
 
-const command: Command = {
-  name: "skip",
-  description: "Skips the currently playing song.",
-  execute: async (message) => {
-    const guildId = message.guildId;
+const command: SlashCommand = {
+  data: new SlashCommandBuilder()
+    .setName("skip")
+    .setDescription("Skips the currently playing song."),
+  execute: async (interaction) => {
+    const { guildId } = interaction;
     if (!guildId) return;
 
     const session = sessionManager.get(guildId);
     if (session) {
       session.player.stop();
-      message.reply("Skipped the song.");
+      await interaction.reply("Skipped the song.");
     } else {
-      message.reply("I am not playing anything.");
+      await interaction.reply("I am not playing anything.");
     }
   },
 };

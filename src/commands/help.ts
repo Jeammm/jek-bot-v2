@@ -1,30 +1,26 @@
-import { Message, EmbedBuilder } from "discord.js";
-import { Command } from "../types";
-import { getCommands } from "../handlers/command_handler";
-import { PREFIX } from "../core/env";
+import { EmbedBuilder, SlashCommandBuilder } from "@discordjs/builders";
+import { SlashCommand } from "../types";
+import { commands } from "../handlers/slash_command_handler";
 
-const helpCommand: Command = {
-  name: "help",
-  description: "Displays all available commands.",
-  execute: async (message: Message) => {
-    const commands = getCommands();
-
+const helpCommand: SlashCommand = {
+  data: new SlashCommandBuilder()
+    .setName("help")
+    .setDescription("Displays all available commands."),
+  execute: async (interaction) => {
     const embed = new EmbedBuilder()
       .setColor(0x4c8fea)
       .setTitle("📘 Bot Command List")
-      .setDescription(
-        `Use \`${PREFIX}<command>\` to run a command.\n\n**Available Commands:**`
-      )
-      .setThumbnail(message.client.user?.displayAvatarURL() || null);
+      .setDescription("Here are all the available slash commands:")
+      .setThumbnail(interaction.client.user?.displayAvatarURL() || null);
 
     commands.forEach((command) => {
       embed.addFields({
-        name: `🔹 \`${PREFIX} ${command.name}\``,
-        value: command.description || "_No description provided._",
+        name: `🔹 \`/${command.data.name}\``,
+        value: command.data.description || "_No description provided._",
       });
     });
 
-    await message.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed] });
   },
 };
 

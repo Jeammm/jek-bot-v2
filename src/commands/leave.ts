@@ -1,17 +1,19 @@
-import { Command } from "../types";
+import { SlashCommand } from "../types";
 import { getVoiceConnection } from "@discordjs/voice";
+import { SlashCommandBuilder } from "@discordjs/builders";
 
-const command: Command = {
-  name: "leave",
-  description: "Leaves the current voice channel.",
-  execute: async (message) => {
-    if (message.guildId) {
-      const connection = getVoiceConnection(message.guildId);
+const command: SlashCommand = {
+  data: new SlashCommandBuilder()
+    .setName("leave")
+    .setDescription("Leaves the current voice channel."),
+  execute: async (interaction) => {
+    if (interaction.guildId) {
+      const connection = getVoiceConnection(interaction.guildId);
       if (connection) {
         connection.destroy();
-        message.reply("Left the voice channel.");
+        await interaction.reply("Left the voice channel.");
       } else {
-        message.reply("I am not in a voice channel.");
+        await interaction.reply("I am not in a voice channel.");
       }
     }
   },

@@ -8,15 +8,24 @@ importers:
 
   .:
     dependencies:
+      '@discordjs/builders':
+        specifier: ^1.13.1
+        version: 1.13.1
       '@discordjs/opus':
         specifier: ^0.10.0
         version: 0.10.0
+      '@discordjs/rest':
+        specifier: ^2.6.0
+        version: 2.6.0
       '@discordjs/voice':
         specifier: ^0.19.0
         version: 0.19.0(@discordjs/opus@0.10.0)(ffmpeg-static@5.3.0)(opusscript@0.1.1)
       '@snazzah/davey':
         specifier: ^0.1.8
         version: 0.1.8
+      discord-api-types:
+        specifier: ^0.38.36
+        version: 0.38.36
       discord.js:
         specifier: ^14.25.1
         version: 14.25.1

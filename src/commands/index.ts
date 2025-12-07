@@ -1,5 +1,4 @@
-import { registerCommand } from "../handlers/command_handler";
-import { Command } from "../types";
+import { SlashCommand } from "../types";
 
 import join from "./join";
 import leave from "./leave";
@@ -12,7 +11,7 @@ import help from "./help";
 import playlist from "./playlist";
 import anthem from "./anthem";
 
-const commands: Command[] = [
+export const slashCommands: SlashCommand[] = [
   join,
   leave,
   pause,
@@ -24,9 +23,3 @@ const commands: Command[] = [
   playlist,
   anthem,
 ];
-
-export function loadCommands() {
-  for (const command of commands) {
-    registerCommand(command);
-  }
-}
